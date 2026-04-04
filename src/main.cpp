@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cstdint>
 #include <string> 
-#include <unordered_map>
 #include <chrono>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -50,12 +49,7 @@ int main(){
             uint64_t order_ref = __builtin_bswap64(msg -> order_ref);
             uint16_t stock_locate = __builtin_bswap16(msg -> stock_locate); 
 
-            Order o;
-            o.order_ref = order_ref;
-            o.price = price;
-            o.shares = shares;
-            o.side = msg -> side;
-            books[stock_locate].add_order(o);
+            books[stock_locate].add_order(order_ref, price, shares, msg->side);
             ref_to_locate[order_ref] = stock_locate;
 
             live_orders++;

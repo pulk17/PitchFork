@@ -1,6 +1,5 @@
 #include <iostream>
 #include <algorithm>
-#include <numeric>
 
 #include "orderbook.hpp"
 
@@ -8,11 +7,11 @@ OrderBook::OrderBook(){
     order_lookup.max_load_factor(0.25);
 }
 
-void OrderBook::add_order(Order& o){
-    order_lookup[o.order_ref] = {o.price, o.shares, o.side};
+void OrderBook::add_order(uint64_t order_ref, uint32_t price, uint32_t shares, char side){
+    order_lookup[order_ref] = {price, shares, side};
 
-    if(o.side == 'B') bids[o.price] += o.shares;
-    else asks[o.price] += o.shares;
+    if(side == 'B') bids[price] += shares;
+    else asks[price] += shares;
 }
 
 void OrderBook::delete_order(uint64_t order_ref){
