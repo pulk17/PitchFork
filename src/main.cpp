@@ -20,14 +20,18 @@ int main(){
     const uint8_t* data = (const uint8_t*) mmap (nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
     const uint8_t* ptr = data;
     const uint8_t* end = data + file_size; 
+    madvise((void*)data, file_size, MADV_SEQUENTIAL);
 
     auto books = std::make_unique<OrderBook[]>(65536);  //transfer from stack to heap [65536 is the max size of uint16_t]
 
-    std::unordered_map<uint64_t, uint16_t> ref_to_locate;
+    ankerl::unordered_dense::map<uint64_t, uint16_t> ref_to_locate;
     ref_to_locate.reserve(150000000);
 
     auto starttime = std::chrono::high_resolution_clock::now();
     int message_count = 0;
+
+    int64_t live_orders = 0;
+    int64_t peak_live = 0;
 
     while(ptr+2 <= end){
         
@@ -53,6 +57,9 @@ int main(){
             o.side = msg -> side;
             books[stock_locate].add_order(o);
             ref_to_locate[order_ref] = stock_locate;
+
+            live_orders++;
+            if(live_orders > peak_live) peak_live = live_orders;
         }
         
         if(msg_type == 'D'){
@@ -61,12 +68,15 @@ int main(){
             
             uint16_t stock_locate = ref_to_locate[order_ref];
             books[stock_locate].delete_order(order_ref);
+
+            live_orders--;
         }
 
         message_count++;
     }
 
     std::cout << "Unique order refs: " << ref_to_locate.size() << "\n";
+    std::cout << "Peak live orders: " << peak_live << "\n";
 
     auto endtime = std::chrono::high_resolution_clock::now();
     double seconds = std::chrono::duration<double>(endtime - starttime).count();

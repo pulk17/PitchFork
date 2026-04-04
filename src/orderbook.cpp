@@ -8,7 +8,7 @@ OrderBook::OrderBook(){
     order_lookup.max_load_factor(0.25);
 }
 
-void OrderBook::add_order(Order o){
+void OrderBook::add_order(Order& o){
     order_lookup[o.order_ref] = {o.price, o.shares, o.side};
 
     if(o.side == 'B') bids[o.price] += o.shares;

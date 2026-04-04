@@ -3,7 +3,7 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <unordered_map>
+#include <ankerl/unordered_dense.h>
 #include <functional>
 
 struct Order{
@@ -20,12 +20,12 @@ struct OrderMeta{
 };
 
 struct OrderBook{
-    std::unordered_map<uint32_t, uint64_t> bids;
-    std::unordered_map<uint32_t, uint64_t> asks;
-    std::unordered_map<uint64_t, OrderMeta> order_lookup;
+   ankerl::unordered_dense::map<uint32_t, uint64_t> bids;
+   ankerl::unordered_dense::map<uint32_t, uint64_t> asks;
+   ankerl::unordered_dense::map<uint64_t, OrderMeta> order_lookup;
 
     OrderBook();
-    void add_order(Order o);
+    void add_order(Order& o);
     void delete_order(uint64_t order_ref);
     void print_top(int levels);
 };

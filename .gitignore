@@ -1,1 +1,7 @@
 *.NASDAQ_ITCH50
+build/
+*.o
+*.out
+*.exe
+*.log
+third_party/

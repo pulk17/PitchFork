@@ -10,5 +10,5 @@ add_executable(orderbook
     src/orderbook.cpp
 )
 
-target_include_directories(orderbook PRIVATE include)
+target_include_directories(orderbook PRIVATE include third_party/unordered_dense/include)
 target_compile_options(orderbook PRIVATE -O3 -march=native)
