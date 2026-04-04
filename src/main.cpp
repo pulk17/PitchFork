@@ -52,77 +52,94 @@ int main(){
 
         char msg_type = buffer[0];
 
-        if(msg_type == 'A'){
-            const AddOrder* msg = reinterpret_cast<const AddOrder*>(buffer);
+        switch(msg_type){
+            case 'A': {
+                const AddOrder* msg = reinterpret_cast<const AddOrder*>(buffer);
 
-            uint32_t price = __builtin_bswap32(msg -> price);
-            uint32_t shares = __builtin_bswap32(msg -> shares);
-            uint64_t order_ref = __builtin_bswap64(msg -> order_ref);
-            uint16_t stock_locate = __builtin_bswap16(msg -> stock_locate); 
+                uint32_t price = __builtin_bswap32(msg -> price);
+                uint32_t shares = __builtin_bswap32(msg -> shares);
+                uint64_t order_ref = __builtin_bswap64(msg -> order_ref);
+                uint16_t stock_locate = __builtin_bswap16(msg -> stock_locate); 
 
-            books[stock_locate].add_order(order_ref, price, shares, msg->side);
-            ref_to_locate[order_ref] = stock_locate;
-        }
+                books[stock_locate].add_order(order_ref, price, shares, msg->side);
+                ref_to_locate[order_ref] = stock_locate;
 
-        if(msg_type == 'F'){
-            const AddOrderMPID* msg = reinterpret_cast<const AddOrderMPID*>(buffer);
-            uint32_t price = __builtin_bswap32(msg->price);
-            uint32_t shares = __builtin_bswap32(msg->shares);
-            uint64_t order_ref = __builtin_bswap64(msg->order_ref);
-            uint16_t stock_locate = __builtin_bswap16(msg->stock_locate);
-            books[stock_locate].add_order(order_ref, price, shares, msg->side);
-            ref_to_locate[order_ref] = stock_locate;
-        }
-
-        if(msg_type == 'E' || msg_type == 'C'){
-            const OrderExecuted* msg = reinterpret_cast<const OrderExecuted*>(buffer);
-            uint64_t order_ref = __builtin_bswap64(msg->order_ref);
-            uint32_t executed_shares = __builtin_bswap32(msg->executed_shares);
-            auto it = ref_to_locate.find(order_ref);
-            if(it != ref_to_locate.end())
-                books[it->second].reduce_order(order_ref, executed_shares);
-        }
-
-        if(msg_type == 'X'){
-            const OrderCancel* msg = reinterpret_cast<const OrderCancel*>(buffer);
-            uint64_t order_ref = __builtin_bswap64(msg->order_ref);
-            uint32_t cancelled_shares = __builtin_bswap32(msg->cancelled_shares);
-            auto it = ref_to_locate.find(order_ref);
-            if(it != ref_to_locate.end())
-                books[it->second].reduce_order(order_ref, cancelled_shares);
-        }
-
-        if(msg_type == 'D'){
-            const DeleteOrder* msg = reinterpret_cast<const DeleteOrder*>(buffer);
-            uint64_t order_ref = __builtin_bswap64(msg->order_ref);
-            auto it = ref_to_locate.find(order_ref);
-            if(it != ref_to_locate.end()){
-                books[it->second].delete_order(order_ref);
-                ref_to_locate.erase(it);
+                break;
             }
-        }
 
-        if(msg_type == 'U'){
-            const OrderReplace* msg = reinterpret_cast<const OrderReplace*>(buffer);
-            uint64_t old_ref = __builtin_bswap64(msg->original_order_ref);
-            uint64_t new_ref = __builtin_bswap64(msg->new_order_ref);
-            uint32_t price = __builtin_bswap32(msg->price);
-            uint32_t shares = __builtin_bswap32(msg->shares);
-            auto it = ref_to_locate.find(old_ref);
-            if(it != ref_to_locate.end()){
-                uint16_t stock_locate = it->second;
-                books[stock_locate].replace_order(old_ref, new_ref, price, shares);
-                ref_to_locate.erase(it);
-                ref_to_locate[new_ref] = stock_locate;
+            case 'F': {
+                const AddOrderMPID* msg = reinterpret_cast<const AddOrderMPID*>(buffer);
+                uint32_t price = __builtin_bswap32(msg->price);
+                uint32_t shares = __builtin_bswap32(msg->shares);
+                uint64_t order_ref = __builtin_bswap64(msg->order_ref);
+                uint16_t stock_locate = __builtin_bswap16(msg->stock_locate);
+                books[stock_locate].add_order(order_ref, price, shares, msg->side);
+                ref_to_locate[order_ref] = stock_locate;
+
+                break;
             }
-        }
 
+            case 'E': 
+            case 'C':{
+                const OrderExecuted* msg = reinterpret_cast<const OrderExecuted*>(buffer);
+                uint64_t order_ref = __builtin_bswap64(msg->order_ref);
+                uint32_t executed_shares = __builtin_bswap32(msg->executed_shares);
+                auto it = ref_to_locate.find(order_ref);
+                if(it != ref_to_locate.end())
+                    books[it->second].reduce_order(order_ref, executed_shares);
+                
+                break;
+            }
+
+            case 'X': {
+                const OrderCancel* msg = reinterpret_cast<const OrderCancel*>(buffer);
+                uint64_t order_ref = __builtin_bswap64(msg->order_ref);
+                uint32_t cancelled_shares = __builtin_bswap32(msg->cancelled_shares);
+                auto it = ref_to_locate.find(order_ref);
+                if(it != ref_to_locate.end())
+                    books[it->second].reduce_order(order_ref, cancelled_shares);
+                
+                break;
+            }
+
+            case 'D': {
+                const DeleteOrder* msg = reinterpret_cast<const DeleteOrder*>(buffer);
+                uint64_t order_ref = __builtin_bswap64(msg->order_ref);
+                auto it = ref_to_locate.find(order_ref);
+                if(it != ref_to_locate.end()){
+                    books[it->second].delete_order(order_ref);
+                    ref_to_locate.erase(it);
+                }
+                
+                break;
+            }
+
+            case 'U': {
+                const OrderReplace* msg = reinterpret_cast<const OrderReplace*>(buffer);
+                uint64_t old_ref = __builtin_bswap64(msg->original_order_ref);
+                uint64_t new_ref = __builtin_bswap64(msg->new_order_ref);
+                uint32_t price = __builtin_bswap32(msg->price);
+                uint32_t shares = __builtin_bswap32(msg->shares);
+                auto it = ref_to_locate.find(old_ref);
+                if(it != ref_to_locate.end()){
+                    uint16_t stock_locate = it->second;
+                    books[stock_locate].replace_order(old_ref, new_ref, price, shares);
+                    ref_to_locate.erase(it);
+                    ref_to_locate[new_ref] = stock_locate;
+                }
+
+                break;
+            }
+
+        }
         
-        auto now = std::chrono::high_resolution_clock::now();
-        double elapsed = std::chrono::duration<double>(now - last_snapshot).count();
-        if(elapsed >= 0.1){
-            books[aapl_locate].print_top(5, sock);
-            last_snapshot = now;
+        if(message_count % 10000 == 0){
+            auto now = std::chrono::high_resolution_clock::now();
+            double elapsed = std::chrono::duration<double>(now - last_snapshot).count();
+            if(elapsed >= 0.1){
+                books[aapl_locate].print_top(5, sock);
+                last_snapshot = now;
+            }
         }
             
         message_count++;
