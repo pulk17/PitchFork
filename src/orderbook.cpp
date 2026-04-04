@@ -9,10 +9,10 @@ OrderBook::OrderBook(){
 }
 
 void OrderBook::add_order(Order o){
-    order_lookup[o.order_ref] = {o.price, o.side};
+    order_lookup[o.order_ref] = {o.price, o.shares, o.side};
 
-    if(o.side == 'B') bids[o.price].push_back(o);
-    else asks[o.price].push_back(o);
+    if(o.side == 'B') bids[o.price] += o.shares;
+    else asks[o.price] += o.shares;
 }
 
 void OrderBook::delete_order(uint64_t order_ref){
@@ -21,16 +21,10 @@ void OrderBook::delete_order(uint64_t order_ref){
     
     OrderMeta& order = it -> second;
 
-    auto& vec = (order.side == 'B') ? bids[order.price] : asks[order.price];
+    auto& map = (order.side == 'B') ? bids : asks;
+    map[order.price] -= order.shares;
     
-    vec.erase(std::remove_if(vec.begin(), vec.end(),
-            [&](const Order& o) { return o.order_ref == order_ref; }),
-            vec.end());
-
-    if(vec.empty()){
-        if(order.side == 'B') bids.erase(order.price);
-        else asks.erase(order.price);
-    }
+    if(map[order.price] == 0) map.erase(order.price);
     order_lookup.erase(order_ref);
 }
 
@@ -42,9 +36,7 @@ void OrderBook::print_top(int levels){
     int cnt = 0;
     for(uint32_t price : ask_prices){
         if(cnt++ >= levels) break;
-        int shares = std::accumulate(asks[price].begin(), asks[price].end(), 0, 
-            [](int sum, const Order& o){ return sum + o.shares; });
-        std::cout << "Price = " << price / 10000.0 << " -> Shares = " << shares << "\n"; 
+        std::cout << "Price = " << price / 10000.0 << " -> Shares = " << asks[price] << "\n"; 
     }
 
     std::cout << "--------------------------------\n";
@@ -56,8 +48,6 @@ void OrderBook::print_top(int levels){
 
     for(uint32_t price : bid_prices){
         if (cnt++ >= levels) break;
-        int shares = std::accumulate(bids[price].begin(), bids[price].end(), 0,
-            [](int sum, const Order& o){ return sum + o.shares; });
-        std::cout << "Price = " << price / 10000.0 << " -> Shares = " << shares << "\n";
+        std::cout << "Price = " << price / 10000.0 << " -> Shares = " << bids[price] << "\n";
     }
 }

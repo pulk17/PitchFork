@@ -15,12 +15,13 @@ struct Order{
 
 struct OrderMeta{
     uint32_t price;
+    uint32_t shares;
     char side;
 };
 
 struct OrderBook{
-    std::unordered_map<uint32_t, std::vector<Order>> bids;
-    std::unordered_map<uint32_t, std::vector<Order>> asks;
+    std::unordered_map<uint32_t, uint64_t> bids;
+    std::unordered_map<uint32_t, uint64_t> asks;
     std::unordered_map<uint64_t, OrderMeta> order_lookup;
 
     OrderBook();
