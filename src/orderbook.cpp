@@ -55,3 +55,24 @@ void OrderBook::print_top(int levels, int sock){
 
     ssize_t _ = write(sock, json.c_str(), json.size());
 }
+
+void OrderBook::reduce_order(uint64_t order_ref, uint32_t cancelled_shares){
+    auto it = order_lookup.find(order_ref);
+    if(it == order_lookup.end()) return;
+    
+    OrderMeta& order = it -> second;
+
+    auto& map = (order.side == 'B') ? bids : asks;
+    map[order.price] -= cancelled_shares;
+
+    if(map[order.price] == 0) map.erase(order.price);
+
+    order.shares -= cancelled_shares;
+    if(order.shares == 0) order_lookup.erase(order_ref);
+}
+
+void OrderBook::replace_order(uint64_t old_ref, uint64_t new_ref, uint32_t price, uint32_t shares){
+    char side = order_lookup[old_ref].side;
+    delete_order(old_ref);
+    add_order(new_ref, price, shares, side);
+}
