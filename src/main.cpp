@@ -24,6 +24,7 @@ int main(){
     auto books = std::make_unique<OrderBook[]>(65536);  //transfer from stack to heap [65536 is the max size of uint16_t]
 
     std::unordered_map<uint64_t, uint16_t> ref_to_locate;
+    ref_to_locate.reserve(150000000);
 
     auto starttime = std::chrono::high_resolution_clock::now();
     int message_count = 0;
@@ -44,8 +45,6 @@ int main(){
             uint32_t shares = __builtin_bswap32(msg -> shares);
             uint64_t order_ref = __builtin_bswap64(msg -> order_ref);
             uint16_t stock_locate = __builtin_bswap16(msg -> stock_locate); 
-
-            double price_dollars = price / 10000.0;
 
             Order o;
             o.order_ref = order_ref;

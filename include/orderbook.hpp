@@ -13,11 +13,17 @@ struct Order{
     char side;
 };
 
+struct OrderMeta{
+    uint32_t price;
+    char side;
+};
+
 struct OrderBook{
     std::unordered_map<uint32_t, std::vector<Order>> bids;
     std::unordered_map<uint32_t, std::vector<Order>> asks;
-    std::unordered_map<uint64_t, Order> order_lookup;
+    std::unordered_map<uint64_t, OrderMeta> order_lookup;
 
+    OrderBook();
     void add_order(Order o);
     void delete_order(uint64_t order_ref);
     void print_top(int levels);
