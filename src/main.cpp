@@ -6,6 +6,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <memory>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 #include "messages.hpp"
 #include "orderbook.hpp"
@@ -21,6 +24,14 @@ int main(){
     const uint8_t* end = data + file_size; 
     madvise((void*)data, file_size, MADV_SEQUENTIAL);
 
+    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    struct sockaddr_un addr;
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, "/tmp/orderbook.sock");
+
+    connect(sock, (struct sockaddr*)&addr, sizeof(addr));
+
     auto books = std::make_unique<OrderBook[]>(65536);  //transfer from stack to heap [65536 is the max size of uint16_t]
 
     ankerl::unordered_dense::map<uint64_t, uint16_t> ref_to_locate;
@@ -31,6 +42,9 @@ int main(){
 
     int64_t live_orders = 0;
     int64_t peak_live = 0;
+
+    uint16_t aapl_locate = 13;
+    auto last_snapshot = starttime;
 
     while(ptr+2 <= end){
         
@@ -51,9 +65,6 @@ int main(){
 
             books[stock_locate].add_order(order_ref, price, shares, msg->side);
             ref_to_locate[order_ref] = stock_locate;
-
-            live_orders++;
-            if(live_orders > peak_live) peak_live = live_orders;
         }
         
         if(msg_type == 'D'){
@@ -62,15 +73,18 @@ int main(){
             
             uint16_t stock_locate = ref_to_locate[order_ref];
             books[stock_locate].delete_order(order_ref);
-
-            live_orders--;
         }
 
+        
+        auto now = std::chrono::high_resolution_clock::now();
+        double elapsed = std::chrono::duration<double>(now - last_snapshot).count();
+        if(elapsed >= 0.1){
+            books[aapl_locate].print_top(5, sock);
+            last_snapshot = now;
+        }
+            
         message_count++;
     }
-
-    std::cout << "Unique order refs: " << ref_to_locate.size() << "\n";
-    std::cout << "Peak live orders: " << peak_live << "\n";
 
     auto endtime = std::chrono::high_resolution_clock::now();
     double seconds = std::chrono::duration<double>(endtime - starttime).count();

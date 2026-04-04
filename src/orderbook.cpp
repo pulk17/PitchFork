@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <unistd.h>
 
 #include "orderbook.hpp"
 
@@ -27,26 +28,30 @@ void OrderBook::delete_order(uint64_t order_ref){
     order_lookup.erase(order_ref);
 }
 
-void OrderBook::print_top(int levels){
+void OrderBook::print_top(int levels, int sock){
     std::vector<uint32_t> ask_prices;
     for(auto& [price, _] : asks) ask_prices.push_back(price);
     std::sort(ask_prices.begin(), ask_prices.end());
-    
+
+    std::vector<uint32_t> bid_prices;
+    for(auto& [price, _] : bids) bid_prices.push_back(price);
+    std::sort(bid_prices.begin(), bid_prices.end(), std::greater<uint32_t>());
+
+    std::string json = "{\"asks\":[";
     int cnt = 0;
     for(uint32_t price : ask_prices){
         if(cnt++ >= levels) break;
-        std::cout << "Price = " << price / 10000.0 << " -> Shares = " << asks[price] << "\n"; 
+        if(cnt > 1) json += ",";
+        json += "[" + std::to_string(price / 10000.0) + "," + std::to_string(asks[price]) + "]";
     }
-
-    std::cout << "--------------------------------\n";
+    json += "],\"bids\":[";
     cnt = 0;
-
-    std::vector<uint32_t> bid_prices;
-    for (auto& [price, _] : bids) bid_prices.push_back(price);
-    std::sort(bid_prices.begin(), bid_prices.end(), std::greater<uint32_t>());
-
     for(uint32_t price : bid_prices){
-        if (cnt++ >= levels) break;
-        std::cout << "Price = " << price / 10000.0 << " -> Shares = " << bids[price] << "\n";
+        if(cnt++ >= levels) break;
+        if(cnt > 1) json += ",";
+        json += "[" + std::to_string(price / 10000.0) + "," + std::to_string(bids[price]) + "]";
     }
+    json += "]}\n";
+
+    ssize_t _ = write(sock, json.c_str(), json.size());
 }

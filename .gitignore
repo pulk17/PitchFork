@@ -5,3 +5,7 @@ build/
 *.exe
 *.log
 third_party/
+*/node_modules/
+*/package-lock.json
+*.DS_Store
+*.vscode/

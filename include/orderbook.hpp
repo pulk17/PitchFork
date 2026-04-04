@@ -17,5 +17,5 @@ struct OrderBook{
     OrderBook();
     void add_order(uint64_t order_ref, uint32_t price, uint32_t shares, char side);
     void delete_order(uint64_t order_ref);
-    void print_top(int levels);
+    void print_top(int levels, int sock);
 };
