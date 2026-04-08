@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdint>
+#include <array>
 #include <string> 
 #include <chrono>
 #include <sys/mman.h>
@@ -30,17 +31,24 @@ int main(){
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, "/tmp/orderbook.sock");
 
-    connect(sock, (struct sockaddr*)&addr, sizeof(addr));
+    int connection = connect(sock, (struct sockaddr*)&addr, sizeof(addr));
+    if(connection < 0){
+        std::cerr << "Socket connect failed: " << strerror(errno) << "\n";
+        return 1;
+    }
+    
+    std::array<std::string, 65536> locate_to_symbol;
+    ankerl::unordered_dense::map<std::string, uint16_t> symbol_to_locate;
 
     auto books = std::make_unique<OrderBook[]>(65536);  //transfer from stack to heap [65536 is the max size of uint16_t]
 
     ankerl::unordered_dense::map<uint64_t, uint16_t> ref_to_locate;
-    ref_to_locate.reserve(6000000);
+    ref_to_locate.reserve(8000000);
 
     auto starttime = std::chrono::high_resolution_clock::now();
     int message_count = 0;
 
-    uint16_t aapl_locate = 13;
+    uint16_t aapl_locate = 0;
     auto last_snapshot = starttime;
 
     while(ptr+2 <= end){
@@ -79,15 +87,17 @@ int main(){
                 break;
             }
 
-            case 'E': 
-            case 'C':{
+            case 'E':
+            case 'C': {
                 const OrderExecuted* msg = reinterpret_cast<const OrderExecuted*>(buffer);
                 uint64_t order_ref = __builtin_bswap64(msg->order_ref);
                 uint32_t executed_shares = __builtin_bswap32(msg->executed_shares);
                 auto it = ref_to_locate.find(order_ref);
-                if(it != ref_to_locate.end())
+                if(it != ref_to_locate.end()){
                     books[it->second].reduce_order(order_ref, executed_shares);
-                
+                    if(books[it->second].order_lookup.find(order_ref) == books[it->second].order_lookup.end())
+                        ref_to_locate.erase(it);
+                }
                 break;
             }
 
@@ -96,11 +106,13 @@ int main(){
                 uint64_t order_ref = __builtin_bswap64(msg->order_ref);
                 uint32_t cancelled_shares = __builtin_bswap32(msg->cancelled_shares);
                 auto it = ref_to_locate.find(order_ref);
-                if(it != ref_to_locate.end())
+                if(it != ref_to_locate.end()){
                     books[it->second].reduce_order(order_ref, cancelled_shares);
-                
+                    if(books[it->second].order_lookup.find(order_ref) == books[it->second].order_lookup.end())
+                        ref_to_locate.erase(it);
+                }
                 break;
-            }
+            }   
 
             case 'D': {
                 const DeleteOrder* msg = reinterpret_cast<const DeleteOrder*>(buffer);
@@ -131,6 +143,23 @@ int main(){
                 break;
             }
 
+            case 'R': {
+                const StockDirectory* msg = reinterpret_cast<const StockDirectory*>(buffer);
+                uint16_t locate = __builtin_bswap16(msg -> stock_locate);
+                
+                std::string ticker(msg->stock, 8);
+                ticker.erase(ticker.find_last_not_of(' ') + 1); // as it is padded
+
+                locate_to_symbol[locate] = ticker;
+                symbol_to_locate[ticker] = locate;
+                break;
+            }
+
+        }
+
+        if(aapl_locate == 0){
+            auto it = symbol_to_locate.find("AAPL");
+            if(it != symbol_to_locate.end()) aapl_locate = it -> second;
         }
         
         if(message_count % 10000 == 0){
@@ -143,6 +172,18 @@ int main(){
         }
             
         message_count++;
+    }
+
+    std::cout << "Total symbols: " << symbol_to_locate.size() << "\n";
+    std::cout << "AAPL locate: " << aapl_locate << "\n";
+
+    // Print a few symbols to sanity check
+    int printed = 0;
+    for(uint16_t i = 0; i < 65536 && printed < 10; i++){
+        if(!locate_to_symbol[i].empty()){
+            std::cout << "  locate " << i << " = " << locate_to_symbol[i] << "\n";
+            printed++;
+        }
     }
 
     auto endtime = std::chrono::high_resolution_clock::now();

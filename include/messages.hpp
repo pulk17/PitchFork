@@ -2,7 +2,7 @@
 #include <cstdint>
 
 #pragma pack(1)
-struct AddOrder{
+struct AddOrder{                // 'A'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -14,7 +14,7 @@ struct AddOrder{
     uint32_t price;
 };
 
-struct DeleteOrder{
+struct DeleteOrder{             // 'X'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -22,7 +22,7 @@ struct DeleteOrder{
     uint64_t order_ref;
 };
 
-struct SystemEvent{
+struct SystemEvent{             // 'S'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -30,7 +30,7 @@ struct SystemEvent{
     char     eventcode;
 };
 
-struct AddOrderMPID {
+struct AddOrderMPID {           // 'F'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -43,7 +43,7 @@ struct AddOrderMPID {
     char     attribution[4];
 };
 
-struct OrderExecuted {
+struct OrderExecuted {          // 'E'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -53,7 +53,7 @@ struct OrderExecuted {
     uint64_t match_number;
 };
 
-struct OrderExecutedWithPrice {
+struct OrderExecutedWithPrice { // 'C'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -65,7 +65,7 @@ struct OrderExecutedWithPrice {
     uint32_t execution_price;
 };
 
-struct OrderCancel {
+struct OrderCancel {            // 'X'
     char     msg_type;
     uint16_t stock_locate;
     uint16_t tracking;
@@ -75,7 +75,7 @@ struct OrderCancel {
 };
 
 struct OrderReplace {
-    char     msg_type;
+    char     msg_type;          // 'U'
     uint16_t stock_locate;
     uint16_t tracking;
     uint8_t  timestamp[6];
@@ -83,5 +83,26 @@ struct OrderReplace {
     uint64_t new_order_ref;
     uint32_t shares;
     uint32_t price;
+};
+
+struct StockDirectory {
+    char     msg_type;         // 'R'
+    uint16_t stock_locate;
+    uint16_t tracking;
+    uint8_t  timestamp[6];
+    char     stock[8];         // left-justified, space-padded — NOT null-terminated
+    char     market_category;
+    char     financial_status;
+    uint32_t round_lot_size;
+    char     round_lots_only;
+    char     issue_classification;
+    char     issue_subtype[2];
+    char     authenticity;
+    char     short_sale_threshold;
+    char     ipo_flag;
+    char     luld_ref_price_tier;
+    char     etp_flag;
+    uint32_t etp_leverage_factor;
+    char     inverse_indicator;
 };
 #pragma pack()

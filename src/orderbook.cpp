@@ -77,5 +77,6 @@ void OrderBook::print_top(int levels, int sock){
     }
     json += "]}\n";
 
-    ssize_t _ = write(sock, json.c_str(), json.size());
+    ssize_t written = write(sock, json.c_str(), json.size());
+    if(written < 0) std::cerr << "Write Failed: " << strerror(errno) << "\n";
 }
