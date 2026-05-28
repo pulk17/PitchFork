@@ -24,26 +24,40 @@ void OrderBook::delete_order(uint64_t order_ref){
     auto& map = (order.side == 'B') ? bids : asks;
 
     auto pit = map.find(order.price);
+    if(pit == map.end()){
+        order_lookup.erase(order_ref);
+        return;
+    }
+
     pit -> second -= order.shares;
     if(pit -> second == 0) map.erase(pit);
     
     order_lookup.erase(order_ref);
 }
 
-void OrderBook::reduce_order(uint64_t order_ref, uint32_t cancelled_shares){
+bool OrderBook::reduce_order(uint64_t order_ref, uint32_t cancelled_shares){
     auto it = order_lookup.find(order_ref);
-    if(it == order_lookup.end()) return;
+    if(it == order_lookup.end()) return true;
     
     OrderMeta& order = it -> second;
 
     auto& map = (order.side == 'B') ? bids : asks;
 
     auto pit = map.find(order.price);
-    pit -> second -= cancelled_shares;
+    if(pit == map.end()) return true;
+
+    uint32_t remove = std::min(cancelled_shares, (uint32_t)std::min(pit -> second, (uint64_t) order.shares));
+
+    pit -> second -= remove;
     if(pit -> second == 0) map.erase(pit);
 
-    order.shares -= cancelled_shares;
-    if(order.shares == 0) order_lookup.erase(order_ref);
+    order.shares -= remove;
+    if(order.shares == 0){
+        order_lookup.erase(it);
+        return true;
+    } 
+
+    return false;
 }
 
 void OrderBook::replace_order(uint64_t old_ref, uint64_t new_ref, uint32_t price, uint32_t shares){
@@ -52,7 +66,7 @@ void OrderBook::replace_order(uint64_t old_ref, uint64_t new_ref, uint32_t price
     add_order(new_ref, price, shares, side);
 }
 
-void OrderBook::print_top(int levels, int sock){
+void OrderBook::print_top(int levels, int sock, const std::string& symbol, uint64_t timestamp_ns){
     std::vector<uint32_t> ask_prices;
     for(auto& [price, _] : asks) ask_prices.push_back(price);
     std::sort(ask_prices.begin(), ask_prices.end());
@@ -61,7 +75,9 @@ void OrderBook::print_top(int levels, int sock){
     for(auto& [price, _] : bids) bid_prices.push_back(price);
     std::sort(bid_prices.begin(), bid_prices.end(), std::greater<uint32_t>());
 
-    std::string json = "{\"asks\":[";
+    std::string json = "{\"symbol\":\"" + symbol + "\","
+                   "\"ts\":" + std::to_string(timestamp_ns) + ","
+                   "\"asks\":[";
     int cnt = 0;
     for(uint32_t price : ask_prices){
         if(cnt++ >= levels) break;

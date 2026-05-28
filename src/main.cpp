@@ -95,7 +95,7 @@ int main(){
                 auto it = ref_to_locate.find(order_ref);
                 if(it != ref_to_locate.end()){
                     books[it->second].reduce_order(order_ref, executed_shares);
-                    if(books[it->second].order_lookup.find(order_ref) == books[it->second].order_lookup.end())
+                    if(books[it->second].reduce_order(order_ref, executed_shares))
                         ref_to_locate.erase(it);
                 }
                 break;
@@ -108,7 +108,7 @@ int main(){
                 auto it = ref_to_locate.find(order_ref);
                 if(it != ref_to_locate.end()){
                     books[it->second].reduce_order(order_ref, cancelled_shares);
-                    if(books[it->second].order_lookup.find(order_ref) == books[it->second].order_lookup.end())
+                    if(books[it->second].reduce_order(order_ref, cancelled_shares))
                         ref_to_locate.erase(it);
                 }
                 break;
@@ -166,6 +166,10 @@ int main(){
             auto now = std::chrono::high_resolution_clock::now();
             double elapsed = std::chrono::duration<double>(now - last_snapshot).count();
             if(elapsed >= 0.1){
+                uint64_t ts = 0;
+                for(int i = 0; i < 6; i++)
+                    ts = (ts << 8) | (uint8_t)buffer[5+i];
+                    
                 books[aapl_locate].print_top(5, sock);
                 last_snapshot = now;
             }
